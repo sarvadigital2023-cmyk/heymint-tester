@@ -1168,17 +1168,10 @@ export default function HeyMintTester() {
                 />
               </Field>
               <Field label="IDL файл" hint="Скачай IDL из Solana Playground и загрузи сюда">
-                <input
-                  ref={idlFileRef}
-                  type="file"
-                  accept=".json"
-                  onChange={handleIdlFile}
-                  className="hidden"
-                  data-testid="input-idl-file"
-                />
-                <button
+                {/* label htmlFor — надёжно открывает file picker на iOS Safari и любом браузере */}
+                <label
+                  htmlFor="idl-file-input"
                   data-testid="button-upload-idl"
-                  onClick={() => idlFileRef.current?.click()}
                   className={`w-full flex items-center justify-center gap-2 border rounded-lg px-4 py-3 text-sm
                     transition-all cursor-pointer ${
                     idlFileName
@@ -1197,7 +1190,16 @@ export default function HeyMintTester() {
                       <span>Загрузить IDL файл (.json)</span>
                     </>
                   )}
-                </button>
+                </label>
+                <input
+                  id="idl-file-input"
+                  ref={idlFileRef}
+                  type="file"
+                  accept=".json,application/json,.pdf,text/plain,*/*"
+                  onChange={handleIdlFile}
+                  data-testid="input-idl-file"
+                  className="mt-1 block w-full text-xs text-[#475569] cursor-pointer file:mr-2 file:py-0.5 file:px-2 file:rounded file:border-0 file:text-xs file:bg-[#1e2433] file:text-[#94a3b8]"
+                />
               </Field>
               <Btn
                 onClick={handleConnect}
