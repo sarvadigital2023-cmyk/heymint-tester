@@ -501,25 +501,34 @@ export default function HeyMintTester() {
   const connectPhantom = useCallback(async () => {
     console.log("Connect clicked");
     const sol = (window as any).solana;
-    if (!sol || !sol.isPhantom) {
-      alert("Phantom не найден — открой сайт в браузере Phantom");
-      addLog("error", "Phantom не установлен или не видит сайт");
+
+    // ── Расширение Phantom установлено (Desktop Chrome/Brave/Edge/Firefox) ──
+    if (sol && sol.isPhantom) {
+      setPhantomConnecting(true);
+      try {
+        const resp = await sol.request({ method: "connect" });
+        const pk: string = resp.publicKey.toString();
+        console.log("Connected via extension:", pk);
+        setPhantomPubkey(pk);
+        addLog("success", `Phantom подключён: ${pk.slice(0, 16)}...`);
+      } catch (e: any) {
+        console.log("Phantom connect error:", e);
+        alert("Ошибка подключения: " + e.message);
+        addLog("error", `Phantom ошибка: ${e.message}`);
+      } finally {
+        setPhantomConnecting(false);
+      }
       return;
     }
-    setPhantomConnecting(true);
-    try {
-      const resp = await sol.request({ method: "connect" });
-      const pk: string = resp.publicKey.toString();
-      console.log("Connected:", pk);
-      setPhantomPubkey(pk);
-      addLog("success", `Phantom подключён: ${pk.slice(0, 16)}...`);
-    } catch (e: any) {
-      console.log("Phantom connect error:", e);
-      alert("Ошибка: " + e.message);
-      addLog("error", `Phantom ошибка: ${e.message}`);
-    } finally {
-      setPhantomConnecting(false);
-    }
+
+    // ── Расширения нет (мобайл Safari/Chrome, десктоп без плагина) ──
+    // Используем Phantom Universal Link — открывает текущий сайт внутри
+    // встроенного браузера Phantom, где window.solana уже инжектирован.
+    // Это официальный паттерн от Phantom (аналог Magic Eden, Jupiter и др.)
+    console.log("No Phantom extension — redirecting via Universal Link");
+    addLog("info", "Phantom extension не найден → открываем сайт в браузере Phantom...");
+    const pageUrl = encodeURIComponent(window.location.href);
+    window.location.href = `https://phantom.app/ul/browse/${pageUrl}?ref=${pageUrl}`;
   }, [addLog]);
 
   const disconnectPhantom = useCallback(async () => {
