@@ -1119,7 +1119,7 @@ export default function HeyMintTester() {
                 className="px-3 py-1.5 text-xs rounded-lg border font-bold transition-all
                   bg-[#00ff9d]/20 border-[#00ff9d] text-[#00ff9d] hover:bg-[#00ff9d]/30"
               >
-                {phantomConnecting ? "⏳..." : "👻 Connect Wallet"}
+                {phantomConnecting ? "⏳..." : "👻 Connect Phantom Wallet"}
               </button>
             ) : (
               <div className="flex items-center gap-2">
