@@ -327,6 +327,11 @@ export default function HeyMintTester() {
   const [phantomPubkey, setPhantomPubkey] = useState<string | null>(null);
   const [phantomConnecting, setPhantomConnecting] = useState(false);
 
+  // — Change Admin
+  const [changeAdminOpen, setChangeAdminOpen]     = useState(false);
+  const [newAdminInput,   setNewAdminInput]       = useState("");
+  const [changeAdminStatus, setChangeAdminStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+
   // — Модалки
   const [modal, setModal]           = useState<{ open: boolean; title: string; text: string; next?: string }>({
     open: false, title: "", text: "", next: undefined
@@ -591,6 +596,59 @@ export default function HeyMintTester() {
       }
     }
   }, [connected, phantomPubkey, programId, idlJson, pools, selectedToken, addLog, setTreasuryBal]);
+
+  // ──────────────────────────
+  // Change Admin
+  // ──────────────────────────
+  const handleChangeAdmin = useCallback(async () => {
+    const sol = (window as any).solana;
+    if (!phantomPubkey || !sol) {
+      setChangeAdminStatus({ ok: false, msg: "Сначала подключите Phantom кошелёк" });
+      return;
+    }
+    if (!connected || !connRef.current) {
+      setChangeAdminStatus({ ok: false, msg: "Сначала подключитесь к сети" });
+      return;
+    }
+    if (!programId || !idlJson) {
+      setChangeAdminStatus({ ok: false, msg: "Укажите Program ID и IDL" });
+      return;
+    }
+    if (!newAdminInput.trim()) {
+      setChangeAdminStatus({ ok: false, msg: "Введите новый Pubkey" });
+      return;
+    }
+    let newAdminKey: PublicKey;
+    try {
+      newAdminKey = new PublicKey(newAdminInput.trim());
+    } catch {
+      setChangeAdminStatus({ ok: false, msg: "Некорректный Pubkey" });
+      return;
+    }
+    try {
+      const idl = JSON.parse(idlJson) as Idl;
+      const pid = new PublicKey(programId);
+      const phantomKey = new PublicKey(phantomPubkey);
+      const wallet = {
+        publicKey: phantomKey,
+        signTransaction: async (tx: any) => sol.signTransaction(tx),
+        signAllTransactions: async (txs: any[]) => sol.signAllTransactions(txs),
+      };
+      const provider = new AnchorProvider(connRef.current, wallet as any, { commitment: "confirmed" });
+      const program = new Program({ ...idl, address: pid.toBase58() }, provider);
+      const tx = await (program.methods as any)
+        .changeAdmin(newAdminKey)
+        .accounts({ admin: phantomKey })
+        .rpc();
+      addLog("success", `changeAdmin выполнен. TX: ${tx.slice(0, 20)}...`);
+      setChangeAdminStatus({ ok: true, msg: `Success! TX: ${tx.slice(0, 20)}...` });
+      setNewAdminInput("");
+    } catch (e: any) {
+      const msg: string = e.message ?? String(e);
+      addLog("error", `changeAdmin ошибка: ${msg.slice(0, 80)}`);
+      setChangeAdminStatus({ ok: false, msg: msg.slice(0, 100) });
+    }
+  }, [connected, phantomPubkey, programId, idlJson, newAdminInput, addLog]);
 
   // ──────────────────────────
   // Загрузка IDL из файла
@@ -1222,6 +1280,59 @@ export default function HeyMintTester() {
               >
                 <span>🪙</span> Initialize Treasury
               </button>
+
+              {/* ── Change Admin ── */}
+              <button
+                type="button"
+                data-testid="button-change-admin-toggle"
+                onClick={() => { setChangeAdminOpen(o => !o); setChangeAdminStatus(null); }}
+                disabled={!connected || !phantomPubkey || testing}
+                className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                  border font-bold text-sm transition-all
+                  border-[#ffd700] text-[#ffd700]
+                  enabled:bg-[#ffd700]/10 enabled:hover:bg-[#ffd700]/20
+                  disabled:bg-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <span>🔑</span> Change Admin
+              </button>
+
+              {changeAdminOpen && (
+                <div className="mt-2 flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newAdminInput}
+                      onChange={e => { setNewAdminInput(e.target.value); setChangeAdminStatus(null); }}
+                      placeholder="Введите новый Pubkey"
+                      data-testid="input-new-admin"
+                      className="flex-1 bg-[#0d1117] border border-[#1e2433] rounded-lg px-3 py-2 text-sm text-white
+                        placeholder:text-[#475569] focus:outline-none focus:border-[#ffd700]/60 font-mono"
+                    />
+                    <button
+                      type="button"
+                      data-testid="button-confirm-change-admin"
+                      onClick={handleChangeAdmin}
+                      disabled={!newAdminInput.trim()}
+                      className="px-4 py-2 rounded-lg border font-bold text-sm transition-all whitespace-nowrap
+                        disabled:border-[#374151] disabled:text-[#6b7280] disabled:bg-transparent disabled:cursor-not-allowed
+                        enabled:border-[#22c55e] enabled:text-[#22c55e] enabled:bg-[#22c55e]/10 enabled:hover:bg-[#22c55e]/20"
+                    >
+                      Confirm Change
+                    </button>
+                  </div>
+                  {changeAdminStatus && (
+                    <p data-testid="text-change-admin-status"
+                      className={`text-xs font-mono px-2 py-1 rounded ${
+                        changeAdminStatus.ok
+                          ? "text-[#22c55e] bg-[#22c55e]/10"
+                          : "text-[#f87171] bg-[#f87171]/10"
+                      }`}
+                    >
+                      {changeAdminStatus.ok ? "✓ " : "✗ "}{changeAdminStatus.msg}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </SectionCard>
 
