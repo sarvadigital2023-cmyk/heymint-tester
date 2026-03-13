@@ -328,9 +328,11 @@ export default function HeyMintTester() {
   const [phantomConnecting, setPhantomConnecting] = useState(false);
 
   // — Change Admin
-  const [changeAdminOpen, setChangeAdminOpen]     = useState(false);
-  const [newAdminInput,   setNewAdminInput]       = useState("");
-  const [changeAdminStatus, setChangeAdminStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [changeAdminOpen, setChangeAdminOpen]       = useState(false);
+  const [newAdminInput,   setNewAdminInput]         = useState("");
+  const [changeAdminStatus, setChangeAdminStatus]   = useState<{ ok: boolean; msg: string } | null>(null);
+  const [adminSuccessModal, setAdminSuccessModal]   = useState<string | null>(null);
+  const [adminCopied,       setAdminCopied]         = useState(false);
 
   // — Модалки
   const [modal, setModal]           = useState<{ open: boolean; title: string; text: string; next?: string }>({
@@ -642,6 +644,8 @@ export default function HeyMintTester() {
         .rpc();
       addLog("success", `changeAdmin выполнен. TX: ${tx.slice(0, 20)}...`);
       setChangeAdminStatus({ ok: true, msg: `Success! TX: ${tx.slice(0, 20)}...` });
+      setAdminSuccessModal(newAdminInput.trim());
+      setAdminCopied(false);
       setNewAdminInput("");
     } catch (e: any) {
       const msg: string = e.message ?? String(e);
@@ -1151,6 +1155,50 @@ export default function HeyMintTester() {
       >
         <p className="text-sm text-[#94a3b8] leading-relaxed">{modal.text}</p>
       </Modal>
+
+      {/* ── Change Admin — модалка успеха ── */}
+      {adminSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-[#0d1117] border border-[#22c55e]/40 rounded-2xl p-6 w-full max-w-sm shadow-2xl flex flex-col gap-4">
+            <h2 data-testid="text-admin-modal-title" className="text-lg font-bold text-[#22c55e] text-center">
+              ✅ Админ успешно изменён!
+            </h2>
+            <div className="flex flex-col gap-1">
+              <p className="text-xs text-[#94a3b8]">Новый админ:</p>
+              <div className="flex items-center gap-2">
+                <span
+                  data-testid="text-admin-modal-pubkey"
+                  className="flex-1 font-mono text-xs text-white bg-[#070a10] border border-[#1e2433] rounded-lg px-3 py-2 truncate"
+                >
+                  {adminSuccessModal.slice(0, 8)}…{adminSuccessModal.slice(-8)}
+                </span>
+                <button
+                  type="button"
+                  data-testid="button-admin-copy"
+                  onClick={() => {
+                    navigator.clipboard.writeText(adminSuccessModal);
+                    setAdminCopied(true);
+                    setTimeout(() => setAdminCopied(false), 2000);
+                  }}
+                  className="shrink-0 px-3 py-2 rounded-lg border text-xs font-bold transition-all
+                    border-[#3b82f6] text-[#3b82f6] bg-[#3b82f6]/10 hover:bg-[#3b82f6]/20"
+                >
+                  {adminCopied ? "✓ Скопировано" : "📋 Копировать"}
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              data-testid="button-admin-modal-close"
+              onClick={() => { setAdminSuccessModal(null); setAdminCopied(false); }}
+              className="w-full py-2 rounded-lg border border-[#1e2433] text-[#94a3b8] text-sm font-bold
+                hover:border-[#374151] hover:text-white transition-all"
+            >
+              Закрыть
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Шапка ── */}
       <header className="sticky top-0 z-40 bg-[#070a10]/90 backdrop-blur border-b border-[#1e2433]">
